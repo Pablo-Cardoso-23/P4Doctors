@@ -1,0 +1,38 @@
+# =========================
+# 1. Arquivos Compilados do Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# 2. Ambientes Virtuais (Pesados demais para o GitHub)
+# =========================
+venv/
+env/
+.venv/
+
+# =========================
+# 3. Variáveis de Ambiente (MUITO IMPORTANTE - Segurança)
+# =========================
+.env
+.env.local
+.env.*
+
+# =========================
+# 4. Bancos de Dados Locais (Para não sobrescrever dados reais)
+# =========================
+*.db
+*.sqlite3
+
+# =========================
+# 5. Configurações do Editor de Código (VS Code)
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# 6. Arquivos do Sistema Operacional (Lixo visual)
+# =========================
+.DS_Store
+Thumbs.db
