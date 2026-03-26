@@ -6,7 +6,7 @@ O **P4 Doctors** é uma aplicação web desenvolvida em Python para centralizar 
 
 ---
 
-## 🎯 Objetivo do Projeto
+## Objetivo do Projeto
 
 Atualmente, o registro manual de atendimentos descentraliza as informações, dificulta a extração de métricas financeiras e aumenta o risco de perda do histórico de pacientes. 
 
@@ -14,16 +14,16 @@ O objetivo do P4 Doctors é fornecer uma interface focada na rotina médica. O s
 
 ---
 
-## ✨ Funcionalidades (Escopo MVP)
+## Funcionalidades (Escopo MVP)
 
-- **🔐 Autenticação Segura:** Sistema de login com controle de sessão para garantir a privacidade dos dados médicos. *(Concluído)*
-- **📝 Gestão de Consultas (CRUD):** Formulário ágil para registro de pacientes, local de atendimento, tipo de consulta, relatório clínico e valor do atendimento.
-- **📊 Dashboards Analíticos:** Painel visual com indicadores chave de desempenho (KPIs), como total de consultas no mês, ganhos financeiros por local e distribuição por tipo de atendimento.
-- **🔍 Histórico de Pacientes:** Tabela de listagem com barra de pesquisa e filtros otimizados para rápida recuperação de prontuários.
+- **Autenticação Segura:** Sistema de login com controle de sessão para garantir a privacidade dos dados médicos. *(Concluído)*
+- **Gestão de Consultas (CRUD):** Formulário ágil para registro de pacientes, local de atendimento, tipo de consulta, relatório clínico e valor do atendimento.
+- **Dashboards Analíticos:** Painel visual com indicadores chave de desempenho (KPIs), como total de consultas no mês, ganhos financeiros por local e distribuição por tipo de atendimento.
+- **Histórico de Pacientes:** Tabela de listagem com barra de pesquisa e filtros otimizados para rápida recuperação de prontuários.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 O sistema foi desenhado utilizando uma **Arquitetura Monolítica em Camadas**, priorizando a velocidade de desenvolvimento e a facilidade de manutenção.
 
@@ -34,7 +34,7 @@ O sistema foi desenhado utilizando uma **Arquitetura Monolítica em Camadas**, p
 
 ---
 
-## 🚀 Como Executar Localmente
+## Como Executar Localmente
 
 Siga os passos abaixo para rodar o projeto na sua máquina:
 
