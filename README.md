@@ -1,4 +1,4 @@
-# 🩺 P4 Doctors
+# P4 Doctors
 
 > **Sistema Web de Gestão Clínica e Painel Analítico**
 

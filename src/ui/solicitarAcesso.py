@@ -7,31 +7,58 @@ Preencha os dados abaixo para solicitar sua conta no **P4 Doctors**.
 Nossa equipe validará seu registro profissional e, em até 24h, você receberá um e-mail com suas credenciais temporárias de acesso.
 """)
 
-with st.form("form_solicitacao"):
-    st.subheader("Dados Pessoais e Profissionais")
+st.markdown("---")
 
-    nome = st.text_input("Nome Completo", placeholder="Ex Dr. Pablo James")
-    email = st.text_input("E-mail Profissinal", placeholder="seuemail@email.com.br")
+st.subheader("Dados Pessoais e Profissionais")
 
-    col1, col2 = st.columns(2)
+nome = st.text_input("Nome Completo", placeholder="Ex Dr. Pablo James")
+email = st.text_input("E-mail Profissional", placeholder="seuemail@email.com.br")
 
-    with col1: 
-        crm = st.text_input("Número do CRM", placeholder="Ex: 123456")
-    with col2:
-        uf_crm = st.selectbox("UF do CRM", ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"])
+col1, col2 = st.columns(2)
 
-    especialidade = st.text_input("Especialidade Principal", placeholder="Ex: Cardiologia, Clínica Médica etc.")
+with col1: 
+    crm = st.text_input("Número do CRM", placeholder="Ex: 123456")
+with col2:
+    uf_crm = st.selectbox("UF do CRM", ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"])
 
-    st.markdown("---")
+lista_especialidades = [
+    "Alergia e Imunologia", "Anestesiologia", "Angiologia", "Cardiologia", 
+    "Cirurgia Geral", "Cirurgia Plástica", "Clínica Médica", "Dermatologia", 
+    "Endocrinologia", "Gastroenterologia", "Geriatria", "Ginecologia e Obstetrícia", 
+    "Infectologia", "Medicina de Família e Comunidade", "Medicina do Trabalho", 
+    "Medicina Intensiva", "Neurologia", "Oftalmologia", "Ortopedia e Traumatologia", 
+    "Otorrinolaringologia", "Pediatria", "Pneumologia", "Psiquiatria", 
+    "Radiologia", "Reumatologia", "Urologia", "Outra (Especificar)"
+]
 
-    botao_enviar = st.form_submit_button("Enviar Solicitação", type="primary", use_container_width=True)
+especialidade_selecionada = st.selectbox("Especialidade Principal", lista_especialidades)
 
-    if botao_enviar:
-        if nome and email and crm and especialidade:
-            st.success("Solicitação enviada com sucesso! Fique de olho na sua caixa de entrada e na pasta de spam. Obrigado por se juntar a P4!")
-            time.sleep(3)
-            st.switch_page("src/ui/sobre.py")
+if especialidade_selecionada == "Outra (Especificar)":
+    especialidade_digitada = st.text_input("Especifique sua Especialidade", placeholder="Digite sua especialidade")
+    if especialidade_digitada:
+        tratar_entrada = especialidade_digitada.strip().lower()
+        lista_limpa = [esp.lower() for esp in lista_especialidades[:-1]]
+        if tratar_entrada in lista_limpa:
+            indice = lista_limpa.index(tratar_entrada)
+            especialidade = lista_especialidades[indice]
+            st.info(f"Notamos que a especialidade digitada já existe em nossa base. Ela foi padronizada automaticamente para: {especialidade}.")
         else:
-            st.warning("Por favor, preencha todos os campos obrigatórios para prosseguir.")
+            especialidade = especialidade_digitada.strip().title()
+    else:
+        especialidade = ""
+else:
+    especialidade = especialidade_selecionada
+
+st.markdown("---")
+
+botao_enviar = st.button("Enviar Solicitação", type="primary", use_container_width=True)
+
+if botao_enviar:
+    if nome and email and crm and especialidade:
+        st.success("Solicitação enviada com sucesso! Fique de olho na sua caixa de entrada e na pasta de spam. Obrigado por se juntar a P4!")
+        time.sleep(3)
+        st.switch_page("src/ui/sobre.py")
+    else:
+        st.warning("Por favor, preencha todos os campos obrigatórios para prosseguir.")
 if st.button("Voltar para a página inicial"):
     st.switch_page("src/ui/sobre.py")

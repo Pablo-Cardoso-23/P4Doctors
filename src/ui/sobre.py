@@ -10,10 +10,10 @@ st.markdown("""
 ### Por que usar o P4 Doctors?
 Adeus planilhas confusas e anotações perdidas. Nós substituímos planilhas manuais e anotações dispersas por uma plataforma inteligente e segura, desenhada exclusivamente para a rotina ágil dos profissionais de saúde:
 
-* **📊 Dashboards Automáticos:** Veja seu faturamento e volume de consultas em tempo real.
-* **📝 Relatórios Ágeis:** Registre seus plantões e pacientes em poucos cliques.
-* **🔒 Segurança e Privacidade:** Acesso restrito e focado no profissional.
-* **📱 Acesso em Qualquer Lugar:** Interface 100% em nuvem e responsiva. Funciona no computador do consultório ou no celular durante o plantão.
+* **Dashboards Automáticos:** Veja seu faturamento e volume de consultas em tempo real.
+* **Relatórios Ágeis:** Registre seus plantões e pacientes em poucos cliques.
+* **Segurança e Privacidade:** Acesso restrito e focado no profissional.
+* **Acesso em Qualquer Lugar:** Interface 100% em nuvem e responsiva. Funciona no computador do consultório ou no celular durante o plantão.
 """)
 
 st.markdown("---")
