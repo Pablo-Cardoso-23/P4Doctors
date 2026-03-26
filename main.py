@@ -5,6 +5,8 @@ if "logged_in" not in st.session_state:
 if "usuario_autenticado" not in st.session_state:
     st.session_state['usuario_autenticado'] = ""
 
+pagina_sobre = st.Page("src/ui/sobre.py", title="P4 Doctors - Sobre")
+pagina_solicitar_acesso = st.Page("src/ui/solicitarAcesso.py", title="Solicitar Acesso")
 pagina_login = st.Page("src/ui/forms.py", title="P4 Doctors - Login")
 pagina_inicial = st.Page("src/ui/menu.py", title="Menu")
 pagina_dashboard = st.Page("src/ui/dashboard.py", title="Dashboards")
@@ -32,6 +34,6 @@ if st.session_state['logged_in']:
         }
     )
 else:
-    pg = st.navigation([pagina_login])
+    pg = st.navigation([pagina_sobre, pagina_login, pagina_solicitar_acesso])
 
 pg.run()

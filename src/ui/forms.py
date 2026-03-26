@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 
-st.set_page_config(page_title="Faça o Login Para Acessar o P4 Doctors", layout="centered")
+# st.set_page_config(page_title="Faça o Login Para Acessar o P4 Doctors", layout="centered")
 
 if "logged_in" not in st.session_state:
     st.session_state['logged_in'] = False
