@@ -1,37 +1,17 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import plotly.express as px
-from datetime import datetime, timedelta
+from src.services.analytics import dados_testes
+
+def criar_card(titulo, valor, coluna):
+    with coluna:
+        container = st.container(border=True)
+        container.markdown(f"<p style='text-align: center; font-size: 14px; color: #a5a5a5; margin-bottom: 0px;'>{titulo}</p>", unsafe_allow_html=True)
+        container.markdown(f"<h3 style='text-align: center; margin-top: 0px;'>{valor}</h3>", unsafe_allow_html=True)
 
 st.title("Dashboard de Faturamento e Produtividade")
 st.markdown("Acompanhe suas métricas financeiras e volume de atendimentos.")
 
 st.markdown("---")
-
-@st.cache_data
-def dados_testes():
-    np.random.seed(42)
-    
-    datas = [datetime.today() - timedelta(days=i) for i in range(30)]
-    locais = ["Hospital das Clínicas", "Hospital de Base", "Hospital Anchieta", "Clínica Particular"]
-    tipos = ["Primeira Consulta", "Retorno", "Procedimento", "Plantão 12h"]
-
-    dados = []
-
-    for _ in range(150):
-        dados.append({
-            "data": np.random.choice(datas),
-            "local": np.random.choice(locais),
-            "tipo": np.random.choice(tipos),
-            "valor": np.random.uniform(150.0, 1500.0)
-        })
-    df = pd.DataFrame(dados)
-
-    df.loc[df['tipo'] == 'Retorno' 'valor'] = 0.0
-    df.loc[df['tipo'] == 'Plantão 12h' 'valor'] = 1200.0
-    
-    return df
 
 df = dados_testes()
 
@@ -54,12 +34,12 @@ ticker_medio = faturamento_total / volume_atendimentos if volume_atendimentos > 
 
 col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
 
-with col_kpi1:
-    st.metric("Faturamento Total (R$)", f"R$ {faturamento_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-with col_kpi2:
-    st.metric("Volume de Atendimentos", f"{volume_atendimentos}")
-with col_kpi3:
-    st.metric("Ticket Médio (R$)", f"R$ {ticker_medio:.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+valor_faturamento = f"R$ {faturamento_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+valor_ticket_medio = f"R$ {ticker_medio:.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+criar_card("FATURAMENTO TOTAL", valor_faturamento, col_kpi1)
+criar_card("VALOR DE ATENDIMENTO", str(volume_atendimentos), col_kpi2)
+criar_card("TICKET MÉDIO", valor_ticket_medio, col_kpi3)
 
 st.markdown("---")
 

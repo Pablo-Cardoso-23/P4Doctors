@@ -10,6 +10,7 @@ pagina_solicitar_acesso = st.Page("src/ui/solicitarAcesso.py", title="Solicitar 
 pagina_login = st.Page("src/ui/forms.py", title="P4 Doctors - Login")
 pagina_inicial = st.Page("src/ui/menu.py", title="Menu")
 pagina_dashboard = st.Page("src/ui/dashboard.py", title="Dashboards")
+pagina_agendamentos = st.Page("src/ui/agenda.py", title="Agendamentos")
 pagina_criar_relatorio = st.Page("src/ui/criarRelatorio.py", title="Novo Relatorio")
 pagina_criar_conta = st.Page("src/ui/criarConta.py", title="Criar Conta")
 
@@ -29,6 +30,7 @@ if st.session_state['logged_in']:
         {
             "Página Inicial": [pagina_inicial],
             "Dashboards": [pagina_dashboard],
+            "Agendamentos": [pagina_agendamentos],
             "Registrar Relatório": [pagina_criar_relatorio],
             "Conta": [pagina_criar_conta],
         }
