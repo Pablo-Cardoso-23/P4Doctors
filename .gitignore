@@ -18,6 +18,7 @@ env/
 .env
 .env.local
 .env.*
+.streamlit
 
 # =========================
 # 4. Bancos de Dados Locais (Para não sobrescrever dados reais)

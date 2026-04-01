@@ -12,7 +12,6 @@ pagina_inicial = st.Page("src/ui/menu.py", title="Menu")
 pagina_dashboard = st.Page("src/ui/dashboard.py", title="Dashboards")
 pagina_agendamentos = st.Page("src/ui/agenda.py", title="Agendamentos")
 pagina_criar_relatorio = st.Page("src/ui/criarRelatorio.py", title="Novo Relatorio")
-pagina_criar_conta = st.Page("src/ui/criarConta.py", title="Criar Conta")
 pagina_admin = st.Page("src/ui/painelAdmin.py", title="Painel Administrativo")
 
 if st.session_state['usuario_autenticado']:
