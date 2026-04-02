@@ -1,9 +1,15 @@
 import streamlit as st
+import time
 import datetime
+from src.utils.security import verificar_acesso
+
+TIMEOUT_MINUTOS = 30
+agora = datetime.datetime.now()
 
 if "usuario_autenticado" not in st.session_state or not st.session_state['usuario_autenticado']:
-    st.warning("Por favor, faça o login para acessar o sistema.")
-    st.stop()
+    st.switch_page("src/ui/forms.py")
+
+verificar_acesso(perfis_permitidos=["Médico", "Secretária"])
 
 st.title("P4 Doctors - Central de Profissional")
 st.markdown(f"#### Bem-vindo(a), Dr(a). {st.session_state['usuario_autenticado']}")
@@ -34,6 +40,6 @@ with col3:
 st.markdown("---")
 
 st.markdown("#### Resumo de Hoje")
-hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+data_atual = agora.strftime("%d/%m/%Y")
 
-st.info(f"Data: {hoje}. Você possui N consultas agendadas e N platão pendente de registro no sistema.")
+st.info(f"Data: {data_atual}. Você possui N consultas agendadas e N platão pendente de registro no sistema.")

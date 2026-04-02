@@ -1,8 +1,17 @@
 import streamlit as st
 import datetime
+import time
 from streamlit_calendar import calendar
+from src.utils.security import verificar_acesso
 
 st.set_page_config(page_title="Agenda Médica", layout="wide")
+
+if "usuario_autenticado" not in st.session_state or not st.session_state['usuario_autenticado']:
+    st.switch_page("src/ui/forms.py")
+
+TIMEOUT_MINUTOS = 30
+agora = datetime.datetime.now()
+verificar_acesso(perfis_permitidos=["Médico", "Secretária"])
 
 st.title("Agenda Médica")
 st.markdown("Gerencie seus horários, consultas e bloqueios de plantão.")
