@@ -36,19 +36,32 @@ with col1:
     opcoes_paciente = ["Selecione um paciente", "+ Cadastrar Novo Paciente", "Não se aplica (Plantão)"] + pacientes_cadastrados
     paciente_selecionado = st.selectbox("Buscar Paciente", opcoes_paciente)
 
-    novo_nome_paciente = ""
-    novo_cpf_paciente = ""
+    dados_novo_paciente = dict()
 
     if paciente_selecionado == "+ Cadastrar Novo Paciente":
         st.markdown("###### Preencha o dados do novo paciente:")
-        novo_nome_paciente = st.text_input("Nome Completo do Paciente")
-        novo_cpf_paciente = st.text_input("CPF (Opcional)", placeholder="000.000.000-00")
-        paciente_final = novo_nome_paciente # Na hora do banco, a ideia é colocar um id novo gerado
+
+        c1, c2 = st.columns(2)
+        with c1:
+            dados_novo_paciente['nome'] = st.text_input("Nome Completo do Paciente")
+        with c2:
+            dados_novo_paciente['cpf'] = st.text_input("CPF ", placeholder="000.000.000-00")
+        
+        c3, c4 = st.columns(2)
+        with c3:
+            dados_novo_paciente['data_nascimento'] = st.date_input("Data de Nascimento", value=None)
+        with c4:
+            dados_novo_paciente['email'] = st.text_input("E-mail para Contato")
+
+        c5, c6 = st.columns([2, 2])
+        with c5:
+            tipos_sangue = ["Não Informado", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+            dados_novo_paciente['tipo_sanguineo'] = st.selectbox("Tipo Sanguíneo", tipos_sangue)
+        with c6:
+            dados_novo_paciente['observacoes'] = st.text_area("Observações Médicas Gerais", height=68)      
     elif paciente_selecionado == "Não se aplica (Plantão)":
-        st.info("Atemdimento em formato de plantão. Nenhum paciente será vinculado a este registro.")
-        paciente_final = None # Na hora do banco, a chave estrangeira (paciente_id) ficará vazia
-    else:
-        paciente_final = paciente_selecionado
+        st.info("Atendimento em formato de plantão. Nenhum paciente será vinculado a este registro.")
+        
 with col2:
     opcoes_tipo = ["Primeira Consulta", "Retorno", "Procedimento", "Plantão", "Outro (Especificar)"]
     tipo_selecionado = st.selectbox("Tipo de Consulta", opcoes_tipo)
@@ -75,8 +88,13 @@ botao_enviar = st.button("Enviar Relatório", type="primary", use_container_widt
 
 if botao_enviar:
     if paciente_selecionado == "Selecione um paciente":
-        st.warning("Por favor, selecione um paciente, cadastre um novo ou marque como plantão.")
-    elif paciente_selecionado == "+ Cadastrar Novo Paciente" and novo_nome_paciente.strip() == "":
-        st.warning("Por favor, preencha o nome do novo paciente para realizar o cadastro.")
+        st.error("Por favor, selecione um paciente ou cadastre um novo.")
+    elif paciente_selecionado == "+ Cadastrar Novo Paciente":
+        if not dados_novo_paciente.get('nome', '').strip():
+            st.error("O Nome Completo é obrigatório para o cadastro de novos pacientes.")
+        elif not dados_novo_paciente.get('cpf', '').strip():
+            st.error("O CPF é obrigatório para o cadastro de novos pacientes.")
+        else:
+            st.success(f"Relatório de {dados_novo_paciente['nome']} validado com sucesso!")
     else:
-        st.success("Relatório validado com sucesso! ")
+        st.success(f"Relatório de {paciente_selecionado} validado com sucesso!")

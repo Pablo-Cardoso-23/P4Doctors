@@ -12,6 +12,7 @@ pagina_inicial = st.Page("src/ui/menu.py", title="Menu")
 pagina_dashboard = st.Page("src/ui/dashboard.py", title="Dashboards")
 pagina_agendamentos = st.Page("src/ui/agenda.py", title="Agendamentos")
 pagina_criar_relatorio = st.Page("src/ui/criarRelatorio.py", title="Novo Relatorio")
+pagina_meus_relatorios = st.Page("src/ui/meusRelatorios.py", title="Meus Relatórios")
 pagina_admin = st.Page("src/ui/painelAdmin.py", title="Painel Administrativo")
 
 if st.session_state['usuario_autenticado']:
@@ -42,6 +43,7 @@ if st.session_state['usuario_autenticado']:
                 "Dashboards": [pagina_dashboard],
                 "Agendamentos": [pagina_agendamentos],
                 "Registrar Relatório": [pagina_criar_relatorio],
+                "Meus Relatórios": [pagina_meus_relatorios],
             }
         )
 else:
