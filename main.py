@@ -1,9 +1,18 @@
 import streamlit as st
+from supabase import create_client, Client
+
+@st.cache_resource
+def init_connection():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 if "usuario_autenticado" not in st.session_state:
     st.session_state['usuario_autenticado'] = None
 if 'tipo_perfil' not in st.session_state:
     st.session_state['tipo_perfil'] = None
+
+supabase: Client = init_connection()
 
 pagina_sobre = st.Page("src/ui/sobre.py", title="P4 Doctors - Sobre")
 pagina_solicitar_acesso = st.Page("src/ui/solicitarAcesso.py", title="Solicitar Acesso")
@@ -31,8 +40,9 @@ if st.session_state['usuario_autenticado']:
             st.markdown("---")
 
             if st.button("Sair da Conta", use_container_width=True):
-                st.session_state['logged_in'] = False
-                st.session_state['usuario_autenticado'] = ""
+                st.session_state['usuario_autenticado'] = None
+                st.session_state['tipo_perfil'] = None
+                st.session_state['usuario_id'] = None
 
                 st.rerun()
                 st.switch_page(pagina_login)

@@ -34,8 +34,22 @@ dados_simulados = {
 
 df_historico = pd.DataFrame(dados_simulados)
 
+df_filtrado = df_historico.copy()
+
+if filtro_tipo != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Tipo"] == filtro_tipo]
+
+if filtro_busca:
+    df_filtrado = df_filtrado[df_filtrado["Paciente/Serviço"].str.contains(filtro_busca, case=False, na=False)]
+
+if isinstance(filtro_data, tuple) and len(filtro_data) == 2:
+    data_inicio, data_fim = filtro_data
+    df_filtrado['Data_Auxiliar'] = pd.to_datetime(df_filtrado['Data'], format="%d/%m/%Y").dt.date
+    df_filtrado = df_filtrado[(df_filtrado['Data_Auxiliar'] >= data_inicio) & (df_filtrado['Data_Auxiliar'] <= data_fim)]
+    df_filtrado = df_filtrado.drop(columns=['Data_Auxiliar'])
+
 st.dataframe(
-    df_historico,
+    df_filtrado,
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -49,7 +63,7 @@ st.markdown("---")
 def converter_para_csv(df):
     return df.to_csv(index=False).encode('utf-8')
 
-csv_dados = converter_para_csv(df_historico)
+csv_dados = converter_para_csv(df_filtrado)
 
 col_acao1, col_acao2, col_acao3 = st.columns([2, 1, 1])
 with col_acao1:
