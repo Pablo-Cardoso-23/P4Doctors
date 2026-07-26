@@ -1,6 +1,48 @@
 import streamlit as st
 import datetime
+from supabase import create_client, Client
 
+# ==========================================
+# 1. PROTEÇÃO DE SESSÃO E CONEXÃO
+# ==========================================
+if not st.session_state.get('usuario_autenticado') or not st.session_state.get('usuario_id'):
+    st.warning("Acesso restrito. Por favor, realize o login para acessar esta página.")
+    st.stop()
+
+@st.cache_resource
+def get_supabase() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+supabase = get_supabase()
+
+# ==========================================
+# 2. CONSULTA DE PACIENTES CADASTRADOS (SUPABASE)
+# ==========================================
+@st.cache_data(ttl=60)
+def carregar_pacientes():
+    """Busca a lista de pacientes ativos cadastrados no banco de dados."""
+    try:
+        res = supabase.table('pacientes')\
+            .select('pessoa_id, pessoas!inner(nome_completo, cpf)')\
+            .execute()
+        
+        pacientes_dict = {}
+        if res.data:
+            for item in res.data:
+                p_id = item['pessoa_id']
+                nome = item['pessoas']['nome_completo']
+                pacientes_dict[f"{nome} (ID: {p_id})"] = p_id
+        return pacientes_dict
+    except Exception:
+        return {}
+
+mapa_pacientes = carregar_pacientes()
+
+# ==========================================
+# 3. INTERFACE DO USUÁRIO
+# ==========================================
 st.title("Registrar um Novo Relatório")
 st.markdown("""
 Preencha os dados abaixo para registrar um atendimento realizado. 
@@ -31,9 +73,8 @@ st.markdown("###### Atenção: nesse campo você deve informar o nome do pacient
 col1, col2 = st.columns(2)
     
 with col1:
-    # Teste de lista de busca: Implementar depois quando o bd for criado
-    pacientes_cadastrados = ["Anthony Silva", "Leonardo Souza", "Vitor Ramalho", "Maria Oliveira"]
-    opcoes_paciente = ["Selecione um paciente", "+ Cadastrar Novo Paciente", "Não se aplica (Plantão)"] + pacientes_cadastrados
+    # Lista alimentada dinamicamente via Supabase
+    opcoes_paciente = ["Selecione um paciente", "+ Cadastrar Novo Paciente", "Não se aplica (Plantão)"] + list(mapa_pacientes.keys())
     paciente_selecionado = st.selectbox("Buscar Paciente", opcoes_paciente)
 
     dados_novo_paciente = dict()
@@ -49,7 +90,11 @@ with col1:
         
         c3, c4 = st.columns(2)
         with c3:
-            dados_novo_paciente['data_nascimento'] = st.date_input("Data de Nascimento", value=None)
+            dados_novo_paciente['data_nascimento'] = st.date_input("Data de Nascimento",
+                                                                    value=None,
+                                                                    min_value=datetime.date(1900, 1, 1),
+                                                                    max_value=datetime.date.today(),
+                                                                    format="DD/MM/YYYY")
         with c4:
             dados_novo_paciente['email'] = st.text_input("E-mail para Contato")
 
@@ -80,21 +125,90 @@ col3, col4 = st.columns(2)
 with col3:
     relatorio_atendimento = st.text_area("Relatório Clínico / Evolução (Campo Opcional)")
 with col4:
-    valor_atendimento = st.number_input("Valor do Atendimento")
+    valor_atendimento = st.number_input("Valor do Atendimento", min_value=0.0, step=50.0, format="%.2f")
 
 st.markdown("---")
 
 botao_enviar = st.button("Enviar Relatório", type="primary", use_container_width=True)
 
+# ==========================================
+# 4. PROCESSAMENTO E PERSISTÊNCIA NO BANCO
+# ==========================================
 if botao_enviar:
     if paciente_selecionado == "Selecione um paciente":
         st.error("Por favor, selecione um paciente ou cadastre um novo.")
-    elif paciente_selecionado == "+ Cadastrar Novo Paciente":
-        if not dados_novo_paciente.get('nome', '').strip():
-            st.error("O Nome Completo é obrigatório para o cadastro de novos pacientes.")
-        elif not dados_novo_paciente.get('cpf', '').strip():
-            st.error("O CPF é obrigatório para o cadastro de novos pacientes.")
-        else:
-            st.success(f"Relatório de {dados_novo_paciente['nome']} validado com sucesso!")
+    elif not local.strip():
+        st.error("Por favor, especifique o local de atendimento.")
     else:
-        st.success(f"Relatório de {paciente_selecionado} validado com sucesso!")
+        id_paciente_final = None
+        erro_processamento = False
+
+        # Caso 1: Cadastrar Novo Paciente antes de salvar o atendimento
+        if paciente_selecionado == "+ Cadastrar Novo Paciente":
+            nome_p = dados_novo_paciente.get('nome', '').strip()
+            cpf_p = dados_novo_paciente.get('cpf', '').strip()
+
+            if not nome_p:
+                st.error("O Nome Completo é obrigatório para o cadastro de novos pacientes.")
+                erro_processamento = True
+            elif not cpf_p:
+                st.error("O CPF é obrigatório para o cadastro de novos pacientes.")
+                erro_processamento = True
+            else:
+                try:
+                    # Inserção 1: Tabela 'pessoas'
+                    res_p = supabase.table('pessoas').insert({
+                        "nome_completo": nome_p,
+                        "cpf": cpf_p,
+                        "status": "Ativo"
+                    }).execute()
+
+                    if res_p.data:
+                        id_paciente_final = res_p.data[0]['id']
+
+                        # Formatando data de nascimento se fornecida
+                        dt_nasc = dados_novo_paciente.get('data_nascimento')
+                        dt_nasc_str = dt_nasc.strftime("%Y-%m-%d") if dt_nasc else None
+
+                        # Inserção 2: Tabela 'pacientes'
+                        supabase.table('pacientes').insert({
+                            "pessoa_id": id_paciente_final,
+                            "data_nascimento": dt_nasc_str,
+                            "email": dados_novo_paciente.get('email', '').strip(),
+                            "tipo_sanguineo": dados_novo_paciente.get('tipo_sanguineo'),
+                            "observacoes": dados_novo_paciente.get('observacoes', '').strip()
+                        }).execute()
+                    else:
+                        st.error("Erro ao gerar registro na tabela de pessoas.")
+                        erro_processamento = True
+                except Exception as e:
+                    st.error(f"Erro ao cadastrar novo paciente no banco de dados: {e}")
+                    erro_processamento = True
+
+        # Caso 2: Paciente Selecionado da Lista
+        elif paciente_selecionado in mapa_pacientes:
+            id_paciente_final = mapa_pacientes[paciente_selecionado]
+
+        # Inserção do Atendimento
+        if not erro_processamento:
+            try:
+                dt_atendimento_str = event_time.strftime("%Y-%m-%d %H:%M:%S")
+                medico_id_logado = st.session_state['usuario_id']
+
+                payload_atendimento = {
+                    "data_atendimento": dt_atendimento_str,
+                    "medico_id": medico_id_logado,
+                    "paciente_id": id_paciente_final, # Pode ser None se for plantão
+                    "local_atendimento": local,
+                    "tipo_consulta": tipo_consulta,
+                    "relatorio_clinico": relatorio_atendimento if relatorio_atendimento.strip() else None,
+                    "valor": float(valor_atendimento),
+                    "criado_por_id": medico_id_logado
+                }
+
+                supabase.table('atendimentos').insert(payload_atendimento).execute()
+
+                st.success("Relatório de atendimento registrado com sucesso no banco de dados!")
+                st.cache_data.clear() # Limpa o cache para que novos pacientes apareçam na lista imediatamente
+            except Exception as e:
+                st.error(f"Erro ao registrar atendimento no Supabase: {e}")
