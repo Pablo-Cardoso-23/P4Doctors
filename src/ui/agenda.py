@@ -1,84 +1,114 @@
+# agenda.py
 import streamlit as st
 import datetime
 import time
+from datetime import timezone, timedelta # Importação adicionada para tratar o fuso horário
 from streamlit_calendar import calendar
+
 from src.utils.security import verificar_acesso
+from src.database.crud import buscar_agendamentos, inserir_agendamento, buscar_pacientes_para_select
 
 st.set_page_config(page_title="Agenda Médica", layout="wide")
 
-if "usuario_autenticado" not in st.session_state or not st.session_state['usuario_autenticado']:
+# Verifica se o usuário está autenticado E se temos o ID dele na sessão
+if not st.session_state.get('usuario_autenticado') or not st.session_state.get('usuario_id'):
     st.switch_page("src/ui/forms.py")
 
-TIMEOUT_MINUTOS = 30
-agora = datetime.datetime.now()
 verificar_acesso(perfis_permitidos=["Médico", "Secretária"])
+
+# --- CAPTURA DE DADOS REAIS DA SESSÃO ---
+# Pegamos o ID real do usuário que fez login
+usuario_logado_id = st.session_state.get('usuario_id')
+medico_logado_id = usuario_logado_id # Assumindo que o médico logado agenda para si mesmo
 
 st.title("Agenda Médica")
 st.markdown("Gerencie seus horários, consultas e bloqueios de plantão.")
 st.markdown("---")
 
+# Busca os eventos reais do banco formatados para o calendário
+eventos_bd = buscar_agendamentos(medico_logado_id)
+
+# Configurações aprimoradas do calendário
 opcoes_calendario = {
     "headerToolbar": {
         "left": "today prev,next",
         "center": "title",
         "right": "dayGridMonth,timeGridWeek,timeGridDay",
     },
-    "initialView": "timeGridWeek", # Começa mostrando a semana
-    "slotMinTime": "06:00:00",     # A agenda começa às 6h da manhã
-    "slotMaxTime": "23:00:00",     # A agenda vai até as 23h
+    "initialView": "timeGridWeek", 
+    "slotMinTime": "06:00:00",     
+    "slotMaxTime": "23:00:00",     
     "allDaySlot": False,
-    "locale": "pt-br",             # Traduz os dias e meses para Português
+    "locale": "pt-br", 
+    
+    # --- MELHORIAS VISUAIS E DE FUSO ---
+    "slotDuration": "00:15:00", # Cada linha agora tem 15 min (deixa os blocos mais altos)
+    "slotLabelFormat": {        # Formata o texto da hora na barra lateral
+        "hour": "2-digit",
+        "minute": "2-digit",
+        "omitZeroMinute": False,
+    },
+    "displayEventEnd": False,   # Oculta a hora final dentro do bloco para poupar espaço
+    "timeZone": "local"         # Garante que o calendário use o fuso do computador
 }
-
-# DADOS SÓ PARA TESTE, DEPOIS COLOCAR O BD
-hoje = datetime.date.today()
-eventos_teste = [
-    {
-        "title": "Carlos Souza (Primeira Consulta)",
-        "start": f"{hoje}T09:00:00",
-        "end": f"{hoje}T10:00:00",
-        "color": "#1f77b4", # Azul
-    },
-    {
-        "title": "Maria Oliveira (Retorno)",
-        "start": f"{hoje}T14:00:00",
-        "end": f"{hoje}T14:30:00",
-        "color": "#2ca02c", # Verde
-    },
-    {
-        "title": "Plantão 12h - Hospital de Base",
-        "start": f"{hoje + datetime.timedelta(days=1)}T07:00:00",
-        "end": f"{hoje + datetime.timedelta(days=1)}T19:00:00",
-        "color": "#d62728", # Vermelho (Destaca bloqueios grandes)
-    }
-]
 
 col_form, col_cal = st.columns([1, 3])
 
 with col_form:
     st.subheader("Novo Agendamento")
 
-    paciente = st.selectbox("Paciente / Evento", ["Selecione", "Bloqueio/Plantão", "Anthony Silva", "Leonardo Souza", "Vitor Ramalho", "Maria Oliveira"])
-    data_evento = st.date_input("Data do Evento", hoje)
+    # BUSCA OS PACIENTES REAIS DO BANCO DE DADOS
+    lista_pacientes = buscar_pacientes_para_select()
+    
+    # O selectbox mostra o 'nome', mas retorna o objeto
+    paciente_selecionado = st.selectbox(
+        "Paciente / Evento", 
+        options=lista_pacientes, 
+        format_func=lambda p: p["nome"]
+    )
+
+    data_evento = st.date_input("Data do Evento", datetime.date.today())
 
     col_hora1, col_hora2 = st.columns(2)
-
     with col_hora1:
         hora_inicio = st.time_input("Início", datetime.time(8, 0))
     with col_hora2:
         hora_fim = st.time_input("Fim", datetime.time(9, 0))
 
     tipo_evento = st.selectbox("Tipo de Evento", ["Primeira Consulta", "Retorno", "Cirurgia", "Bloqueio Pessoal"])
-    status_evento = st.selectbox("Status", ["Agendado", "Confirmado"])
+    status_evento = st.selectbox("Status", ["Agendado", "Confirmado", "Cancelado"])
+    observacoes = st.text_area("Observações (Opcional)", max_chars=500)
 
     st.markdown("---")
     botao_agendar = st.button("Salvar Agendamento", type="primary", use_container_width=True)
 
     if botao_agendar:
-        if paciente == "Selecione":
-            st.warning("Selecione um paciente ou informe que é um bloqueio.")
+        if hora_fim <= hora_inicio:
+            st.error("A hora de término deve ser posterior à hora de início.")
         else:
-            st.success("Agendamento salvo!")
+            # 1. CRIAMOS A REGRA DO FUSO DO BRASIL (UTC-3)
+            fuso_br = timezone(timedelta(hours=-3))
+            
+            # 2. AVISAMOS O PYTHON QUAL É O NOSSO FUSO HORÁRIO AO JUNTAR DATA E HORA
+            dt_inicio_completa = datetime.datetime.combine(data_evento, hora_inicio, tzinfo=fuso_br)
+            dt_fim_completa = datetime.datetime.combine(data_evento, hora_fim, tzinfo=fuso_br)
+            
+            # 3. CHAMANDO A FUNÇÃO DO CRUD PARA SALVAR NO SUPABASE
+            inserir_agendamento(
+                medico_id=medico_logado_id,
+                paciente_id=paciente_selecionado["id"],
+                data_hora_inicio=dt_inicio_completa,
+                data_hora_fim=dt_fim_completa,
+                tipo_evento=tipo_evento,
+                status=status_evento,
+                observacoes=observacoes,
+                criado_por_id=usuario_logado_id
+            )
+            
+            st.success("Agendamento salvo com sucesso!")
+            time.sleep(1) 
+            st.rerun() # Recarrega a página para atualizar o calendário
+
 with col_cal:
     estilo_customizado = """
         .fc-event-time { font-style: normal; font-weight: bold; }
@@ -87,7 +117,7 @@ with col_cal:
     """
 
     calendario = calendar(
-        events=eventos_teste,
+        events=eventos_bd,
         options=opcoes_calendario,
         custom_css=estilo_customizado
     )
