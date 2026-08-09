@@ -3,12 +3,16 @@ import pandas as pd
 import datetime
 from supabase import create_client, Client
 
-# ==========================================
-# 1. PROTEÇÃO DE SESSÃO E CONEXÃO
-# ==========================================
+from src.database.crud import buscar_medicos_vinculados
+from src.utils.security import verificar_acesso
+
+st.set_page_config(page_title="Histórico de Atendimentos", layout="wide")
+
 if not st.session_state.get('usuario_autenticado') or not st.session_state.get('usuario_id'):
     st.warning("Acesso restrito. Por favor, realize o login para acessar esta página.")
     st.stop()
+
+verificar_acesso(perfis_permitidos=["Médico", "Secretária", "Administrativo"])
 
 @st.cache_resource
 def get_supabase() -> Client:
@@ -18,9 +22,29 @@ def get_supabase() -> Client:
 
 supabase = get_supabase()
 
-# ==========================================
-# 2. CARREGAMENTO DE DADOS REAIS DO SUPABASE
-# ==========================================
+usuario_logado_id = st.session_state.get('usuario_id')
+tipo_perfil = st.session_state.get('tipo_perfil')
+
+medico_alvo_id = None
+
+if tipo_perfil in ['Secretária', 'Administrativo']:
+    st.info("Modo Equipe: Selecione o profissional para visualizar o histórico de atendimentos.")
+    
+    lista_medicos = buscar_medicos_vinculados(usuario_logado_id)
+    
+    if not lista_medicos:
+        st.error("Você ainda não possui vínculo com nenhum médico. Contate o administrador.")
+        st.stop()
+
+    medico_selecionado = st.selectbox(
+        "Profissional", 
+        options=lista_medicos, 
+        format_func=lambda m: m["nome"]
+    )
+    medico_alvo_id = medico_selecionado["id"]
+else:
+    medico_alvo_id = usuario_logado_id
+
 def carregar_historico_db(medico_id):
     try:
         res = supabase.table('atendimentos')\
@@ -34,13 +58,9 @@ def carregar_historico_db(medico_id):
         
         registros_processados = []
         for item in res.data:
-            # Tratamento Flexível de Data
             data_bruta = item['data_atendimento']
-            
-            # Normaliza o formato caso o banco devolva com "T" (ex: 2026-07-28T15:30:00)
             data_bruta = data_bruta.replace("T", " ")
             
-            # Verifica se tem horário embutido ou apenas a data
             if len(data_bruta) > 10:
                 dt_obj = datetime.datetime.strptime(data_bruta[:19], "%Y-%m-%d %H:%M:%S")
             else:
@@ -67,13 +87,9 @@ def carregar_historico_db(medico_id):
     except Exception as e:
         st.error(f"Erro ao consultar histórico no banco de dados: {e}")
         return pd.DataFrame(columns=["Data", "Paciente/Serviço", "Tipo", "Local", "Valor (R$)", "Status"])
-    
-# Carrega o DataFrame vindo direto do PostgreSQL filtrado pelo médico logado
-df_historico = carregar_historico_db(st.session_state['usuario_id'])
 
-# ==========================================
-# 3. INTERFACE E FILTROS DO USUÁRIO
-# ==========================================
+df_historico = carregar_historico_db(medico_alvo_id)
+
 st.title("Histórico de Atendimentos")
 st.markdown("Consulte, filtre e revise todos os relatórios, consultas e plantões registrados no sistema.")
 st.markdown("---")
@@ -92,7 +108,6 @@ st.markdown("---")
 
 st.subheader("Relatórios Registrados")
 
-# Cópia para aplicação dos filtros em memória, mantendo a responsividade do Pandas
 df_filtrado = df_historico.copy()
 
 if filtro_tipo != "Todos":
@@ -105,11 +120,9 @@ if isinstance(filtro_data, tuple) and len(filtro_data) == 2 and not df_filtrado.
     data_inicio, data_fim = filtro_data
     df_filtrado = df_filtrado[(df_filtrado['Data_ISO'] >= data_inicio) & (df_filtrado['Data_ISO'] <= data_fim)]
 
-# Remove a coluna auxiliar para não exibi-la na tabela da interface
 if 'Data_ISO' in df_filtrado.columns:
     df_filtrado = df_filtrado.drop(columns=['Data_ISO'])
 
-# Renderização da Tabela reativa
 st.dataframe(
     df_filtrado,
     use_container_width=True,
@@ -121,9 +134,6 @@ st.dataframe(
 
 st.markdown("---")
 
-# ==========================================
-# 4. AÇÕES E EXPORTAÇÃO
-# ==========================================
 @st.cache_data
 def converter_para_csv(df):
     return df.to_csv(index=False).encode('utf-8')

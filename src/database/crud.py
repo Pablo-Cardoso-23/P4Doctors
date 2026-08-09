@@ -1,9 +1,9 @@
 import streamlit as st
+import pandas as pd
 from supabase import create_client, Client
 import uuid
 from datetime import datetime
 
-# 1. FUNÇÃO PARA PEGAR A CONEXÃO COM O SUPABASE
 @st.cache_resource
 def obter_conexao_supabase() -> Client:
     url = st.secrets["SUPABASE_URL"]
@@ -13,11 +13,8 @@ def obter_conexao_supabase() -> Client:
 supabase = obter_conexao_supabase()
 
 def buscar_agendamentos(medico_id: str) -> list:
-    """
-    Busca os agendamentos no Supabase e faz um Join aninhado para pegar o nome.
-    """
     resposta = supabase.table('agendamentos').select(
-        'id, tipo_evento, data_hora_inicio, data_hora_fim, pacientes(pessoas(nome_completo))'
+        'id, tipo_evento, data_hora_inicio, data_hora_fim, status, observacoes, pacientes(pessoas(nome_completo))'
     ).eq('medico_id', str(medico_id)).execute()
     
     dados_banco = resposta.data 
@@ -44,20 +41,16 @@ def buscar_agendamentos(medico_id: str) -> list:
             "title": titulo,
             "start": linha.get('data_hora_inicio'), 
             "end": linha.get('data_hora_fim'),
-            "color": cores_por_tipo.get(tipo_evento, "#333333")
+            "color": cores_por_tipo.get(tipo_evento, "#333333"),
+            "status": linha.get('status'),
+            "observacoes": linha.get('observacoes')
         })
         
     return eventos_calendario
 
-
 def buscar_pacientes_para_select() -> list:
-    """
-    Busca os pacientes no banco para popular o selectbox do formulário.
-    """
-    # 1. Mudamos a busca de 'id' para 'pessoa_id'
     resposta = supabase.table('pacientes').select('pessoa_id, pessoas(nome_completo)').execute()
     
-    # A primeira opção sempre será o Bloqueio/Plantão (sem paciente vinculado)
     lista_formatada = [{"id": None, "nome": "Bloqueio/Plantão"}]
     
     for linha in resposta.data:
@@ -65,16 +58,12 @@ def buscar_pacientes_para_select() -> list:
         nome_paciente = dados_pessoa.get('nome_completo') if dados_pessoa else "Sem Nome"
         
         lista_formatada.append({
-            # 2. Pegamos o valor usando 'pessoa_id', mas mantemos a chave como 'id' 
-            # para o selectbox do Streamlit continuar funcionando perfeitamente
             "id": linha.get('pessoa_id'), 
             "nome": nome_paciente
         })
         
     return lista_formatada
 
-
-# 3. FUNÇÃO DEFINITIVA DE INSERÇÃO (INSERT)
 def inserir_agendamento(
     medico_id: str,
     paciente_id: str,
@@ -85,9 +74,6 @@ def inserir_agendamento(
     observacoes: str,
     criado_por_id: str
 ):
-    """
-    Salva um novo agendamento na tabela 'agendamentos' do Supabase.
-    """
     dados_insercao = {
         "id": str(uuid.uuid4()),
         "medico_id": str(medico_id),
@@ -103,3 +89,52 @@ def inserir_agendamento(
     resposta = supabase.table('agendamentos').insert(dados_insercao).execute()
     
     return resposta.data
+
+def buscar_dados_dashboard(medico_id: str) -> pd.DataFrame:
+    resposta = supabase.table('atendimentos').select(
+        'data_atendimento, local_atendimento, tipo_consulta, valor'
+    ).eq('medico_id', str(medico_id)).execute()
+    
+    dados = resposta.data
+    
+    if not dados:
+        return pd.DataFrame(columns=['data', 'local', 'tipo', 'valor'])
+        
+    df = pd.DataFrame(dados)
+    
+    df = df.rename(columns={
+        'data_atendimento': 'data',
+        'local_atendimento': 'local',
+        'tipo_consulta': 'tipo',
+        'valor': 'valor'
+    })
+    
+    df['data'] = pd.to_datetime(df['data'])
+    df['valor'] = pd.to_numeric(df['valor'], errors='coerce').fillna(0)
+    
+    return df
+
+def buscar_medicos_vinculados(secretaria_id: str) -> list:
+    """
+    Busca apenas os médicos que estão vinculados à secretária/equipe logada.
+    Caminho do Join: vinculo_equipe_medico -> medicos -> pessoas
+    """
+    resposta = supabase.table('vinculo_equipe_medico') \
+        .select('medico_id, medicos(pessoas(nome_completo))') \
+        .eq('equipe_id', str(secretaria_id)) \
+        .execute()
+    
+    lista_formatada = []
+    
+    for linha in resposta.data:
+        id_do_medico = linha.get('medico_id')
+        dados_medico = linha.get('medicos') 
+        dados_pessoa = dados_medico.get('pessoas') if dados_medico else None
+        nome = dados_pessoa.get('nome_completo') if dados_pessoa else "Sem Nome"
+        
+        lista_formatada.append({
+            "id": id_do_medico, 
+            "nome": f"Dr(a). {nome}"
+        })
+        
+    return lista_formatada
