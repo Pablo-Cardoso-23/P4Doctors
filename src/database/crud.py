@@ -138,3 +138,55 @@ def buscar_medicos_vinculados(secretaria_id: str) -> list:
         })
         
     return lista_formatada
+
+def listar_todos_usuarios():
+    """
+    Busca todas as pessoas e faz um join com medicos e equipe_apoio.
+    """
+    resposta = supabase.table('pessoas').select(
+        'id, nome_completo, cpf, status, data_cadastro, '
+        'medicos(crm, especialidade, email), '
+        'equipe_apoio(papel, email)'
+    ).execute()
+    
+    return resposta.data
+
+def atualizar_status_usuario(pessoa_id: str, novo_status: str):
+    """
+    Atualiza o status de um usuário na tabela 'pessoas' (Aprovar, Recusar, Inativo).
+    """
+    resposta = supabase.table('pessoas').update(
+        {'status': novo_status}
+    ).eq('id', str(pessoa_id)).execute()
+    
+    return resposta.data
+
+def criar_usuario_completo(nome, cpf, email, perfil, crm, especialidade, senha_hash):
+    """
+    Cadastra uma pessoa e a vincula automaticamente como Médico ou Equipe de Apoio.
+    """
+    res_pessoa = supabase.table('pessoas').insert({
+        'nome_completo': nome,
+        'cpf': cpf,
+        'status': 'Ativo'
+    }).execute()
+    
+    pessoa_id = res_pessoa.data[0]['id']
+    
+    if perfil == 'Médico':
+        supabase.table('medicos').insert({
+            'pessoa_id': pessoa_id,
+            'email': email,
+            'crm': crm,
+            'especialidade': especialidade,
+            'senha_hash': senha_hash
+        }).execute()
+    else:
+        supabase.table('equipe_apoio').insert({
+            'pessoa_id': pessoa_id,
+            'email': email,
+            'papel': perfil,
+            'senha_hash': senha_hash
+        }).execute()
+        
+    return pessoa_id
