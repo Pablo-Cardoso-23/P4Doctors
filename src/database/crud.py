@@ -301,3 +301,51 @@ def recusar_agendamento_web(agendamento_id: int):
     }).eq('id', agendamento_id).execute()
     
     return resposta.data
+
+def buscar_dados_conversao_dashboard(medico_id: str) -> pd.DataFrame:
+    """
+    Busca os agendamentos e classifica a origem (Site/Web vs Interno) 
+    para analise de conversao e captacao de leads.
+    """
+    resposta = supabase.table('agendamentos').select(
+        'data_hora_inicio, status, criado_por_id'
+    ).eq('medico_id', str(medico_id)).execute()
+    
+    dados = resposta.data
+    
+    if not dados:
+        return pd.DataFrame(columns=['data', 'status', 'origem'])
+        
+    df = pd.DataFrame(dados)
+    df['data'] = pd.to_datetime(df['data_hora_inicio']).dt.date
+    df['origem'] = df['criado_por_id'].apply(
+        lambda x: 'Site/Web' if pd.isna(x) or x is None else 'Recepcao/Interno'
+    )
+    
+    return df[['data', 'status', 'origem']]
+
+def cadastrar_paciente_rapido(nome: str, email: str, telefone: str) -> str:
+    """
+    Cadastra um paciente rapidamente pela tela de agendamento 
+    ou retorna o ID existente se o e-mail ja constar no banco.
+    """
+    email_tratado = email.strip().lower()
+    busca_paciente = supabase.table('pacientes').select('pessoa_id').eq('email', email_tratado).execute()
+    
+    if busca_paciente.data:
+        return busca_paciente.data[0]['pessoa_id']
+        
+    res_pessoa = supabase.table('pessoas').insert({
+        'nome_completo': nome.strip(),
+        'telefone': telefone.strip(),
+        'status': 'Ativo'
+    }).execute()
+    
+    novo_id = res_pessoa.data[0]['id']
+    
+    supabase.table('pacientes').insert({
+        'pessoa_id': novo_id,
+        'email': email_tratado
+    }).execute()
+    
+    return novo_id
