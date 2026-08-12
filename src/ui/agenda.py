@@ -4,7 +4,15 @@ import time
 from datetime import timezone, timedelta
 from streamlit_calendar import calendar
 from src.utils.security import verificar_acesso
-from src.database.crud import buscar_agendamentos, inserir_agendamento, buscar_pacientes_para_select, buscar_medicos_vinculados
+from src.database.crud import (
+    buscar_agendamentos, 
+    inserir_agendamento, 
+    buscar_pacientes_para_select, 
+    buscar_medicos_vinculados, 
+    buscar_agendamentos_pendentes, 
+    aprovar_agendamento_web, 
+    recusar_agendamento_web
+)
 
 st.set_page_config(page_title="Agenda Médica", layout="wide")
 
@@ -118,7 +126,7 @@ with col_form:
             st.rerun() 
 
 with col_cal:
-    aba_calendario, aba_lista = st.tabs(["Calendário", "Lista de Agendamentos"])
+    aba_calendario, aba_lista, aba_solicitacoes = st.tabs(["Calendário", "Lista de Agendamentos", "Solicitações da Web"])
 
     with aba_calendario:
         estilo_customizado = """
@@ -153,3 +161,51 @@ with col_cal:
             st.dataframe(dados_tabela, use_container_width=True, hide_index=True)
         else:
             st.info("Nenhum agendamento encontrado para este médico.")
+
+    with aba_solicitacoes:
+        st.subheader("Caixa de Entrada - Agendamentos Online")
+        st.markdown("Revise as solicitações de pacientes feitas pelo site. Ao aprovar, o paciente será cadastrado automaticamente (se for novo) e o horário será confirmado na agenda.")
+        st.markdown("---")
+        
+        pendentes = buscar_agendamentos_pendentes(medico_alvo_id)
+        
+        if not pendentes:
+            st.success("Tudo limpo! Não há novas solicitações de agendamento pela web no momento.")
+        else:
+            for req in pendentes:
+                with st.container(border=True):
+                    col1, col2, col3 = st.columns([3, 2, 2])
+            
+                    dt_str = req['data_hora_inicio'].replace("Z", "+00:00")
+                    dt_obj = datetime.datetime.fromisoformat(dt_str)
+                    data_formatada = dt_obj.strftime("%d/%m/%Y às %H:%M")
+                    
+                    with col1:
+                        st.write(f"**Paciente:** {req.get('nome_solicitante', '-')}")
+                        st.write(f"**Contato:** {req.get('telefone_solicitante', '-')} | {req.get('email_solicitante', '-')}")
+                    
+                    with col2:
+                        st.write(f"**Data Solicitada:**")
+                        st.write(f"{data_formatada}")
+                        st.write(f"**Obs:** {req.get('observacoes', '-')}")
+                    
+                    with col3:
+                        st.write("")
+                        col3_a, col3_b = st.columns(2)
+                        
+                        if col3_a.button("Aprovar", key=f"apr_{req['id']}", type="primary", use_container_width=True):
+                            aprovar_agendamento_web(
+                                agendamento_id=req['id'], 
+                                nome_paciente=req.get('nome_solicitante', ''), 
+                                email_paciente=req.get('email_solicitante', ''), 
+                                telefone_paciente=req.get('telefone_solicitante', '')
+                            )
+                            st.success("Aprovado! Paciente registrado e consulta marcada.")
+                            time.sleep(1)
+                            st.rerun()
+                            
+                        if col3_b.button("Recusar", key=f"rec_{req['id']}", use_container_width=True):
+                            recusar_agendamento_web(req['id'])
+                            st.warning("Solicitação recusada. O horário continua livre.")
+                            time.sleep(1)
+                            st.rerun()

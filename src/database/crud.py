@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import bcrypt
 
 @st.cache_resource
 def obter_conexao_supabase() -> Client:
@@ -190,3 +191,113 @@ def criar_usuario_completo(nome, cpf, email, perfil, crm, especialidade, senha_h
         }).execute()
         
     return pessoa_id
+
+def atualizar_senha_usuario(pessoa_id: str, perfil: str, senha_texto_claro: str):
+    """
+    Gera o hash da nova senha e atualiza no banco de dados junto com a data atual.
+    """
+    senha_bytes = senha_texto_claro.encode('utf-8')
+    novo_hash = bcrypt.hashpw(senha_bytes, bcrypt.gensalt()).decode('utf-8')
+    data_atual = datetime.now().isoformat()
+    
+    if perfil == 'Médico':
+        resposta = supabase.table('medicos').update({
+            'senha_hash': novo_hash,
+            'data_ultima_troca_senha': data_atual
+        }).eq('pessoa_id', str(pessoa_id)).execute()
+    else:
+        resposta = supabase.table('equipe_apoio').update({
+            'senha_hash': novo_hash,
+            'data_ultima_troca_senha': data_atual
+        }).eq('pessoa_id', str(pessoa_id)).execute()
+        
+    return resposta.data
+
+def buscar_medicos_publico():
+    """
+    Busca os médicos ativos para exibir na página pública de agendamentos.
+    """
+    resposta = supabase.table('medicos').select(
+        'pessoa_id, especialidade, pessoas!pessoa_id(nome_completo, status)'
+    ).execute()
+    
+    medicos_ativos = []
+    for m in resposta.data:
+        if m.get('pessoas', {}).get('status') == 'Ativo':
+            medicos_ativos.append({
+                'id': m['pessoa_id'],
+                'nome': f"Dr(a). {m['pessoas']['nome_completo']}",
+                'especialidade': m.get('especialidade', 'Geral')
+            })
+    return medicos_ativos
+
+def criar_agendamento_publico(medico_id, data_hora_inicio, nome, email, telefone, observacoes):
+    """
+    Salva a solicitação (Lead) feita pelo paciente na internet.
+    """
+    inicio_obj = datetime.fromisoformat(data_hora_inicio)
+    fim_obj = inicio_obj + timedelta(minutes=30)
+    
+    resposta = supabase.table('agendamentos').insert({
+        'medico_id': medico_id,
+        'data_hora_inicio': inicio_obj.isoformat(),
+        'data_hora_fim': fim_obj.isoformat(),
+        'tipo_evento': 'Consulta',
+        'status': 'Pendente', 
+        'nome_solicitante': nome,
+        'email_solicitante': email,
+        'telefone_solicitante': telefone,
+        'observacoes': f"[VIA WEB] {observacoes}"
+    }).execute()
+    
+    return resposta.data
+
+def aprovar_agendamento_web(agendamento_id: int, nome_paciente: str, email_paciente: str, telefone_paciente: str):
+    """
+    Verifica se o paciente já existe pelo e-mail. Se sim, apenas vincula. 
+    Se não, cadastra o novo paciente antes de aprovar o agendamento.
+    """
+    busca_paciente = supabase.table('pacientes').select('pessoa_id').eq('email', email_paciente.strip().lower()).execute()
+    
+    if busca_paciente.data:
+        paciente_oficial_id = busca_paciente.data[0]['pessoa_id']
+    else:
+        res_pessoa = supabase.table('pessoas').insert({
+            'nome_completo': nome_paciente.strip(),
+            'telefone': telefone_paciente.strip(),
+            'status': 'Ativo'
+        }).execute()
+        
+        paciente_oficial_id = res_pessoa.data[0]['id']
+        
+        supabase.table('pacientes').insert({
+            'pessoa_id': paciente_oficial_id,
+            'email': email_paciente.strip().lower()
+        }).execute()
+
+    resposta_agendamento = supabase.table('agendamentos').update({
+        'paciente_id': paciente_oficial_id,
+        'status': 'Confirmado'
+    }).eq('id', agendamento_id).execute()
+    
+    return resposta_agendamento.data
+
+def buscar_agendamentos_pendentes(medico_id: str):
+    """
+    Busca todas as solicitações vindas da internet (status = Pendente) para a caixa de entrada.
+    """
+    resposta = supabase.table('agendamentos').select(
+        'id, data_hora_inicio, observacoes, nome_solicitante, email_solicitante, telefone_solicitante'
+    ).eq('medico_id', medico_id).eq('status', 'Pendente').order('data_hora_inicio').execute()
+    
+    return resposta.data
+
+def recusar_agendamento_web(agendamento_id: int):
+    """
+    Altera o status da solicitação web para 'Recusado', liberando o horário na agenda.
+    """
+    resposta = supabase.table('agendamentos').update({
+        'status': 'Recusado'
+    }).eq('id', agendamento_id).execute()
+    
+    return resposta.data

@@ -45,9 +45,7 @@ for u in todos_usuarios:
         email = dados_especificos.get('email', '')
         crm = "-"
     else:
-        perfil = "Indefinido"
-        email = "-"
-        crm = "-"
+        continue
 
     usuarios_processados.append({
         "ID": u['id'],
@@ -124,7 +122,7 @@ with aba_usuarios:
             st.write("")
             if usuario_selecionado:
                 if usuario_selecionado['Status'] == 'Ativo':
-                    if st.button("Inativar (Soft Delete)", use_container_width=True):
+                    if st.button("Inativar", use_container_width=True):
                         atualizar_status_usuario(usuario_selecionado['ID'], 'Inativo')
                         st.success("Usuário inativado com sucesso!")
                         st.rerun()
@@ -138,7 +136,7 @@ with aba_usuarios:
 
 with aba_novo_usuario:
     st.subheader("Adicionar Usuário ao Sistema")
-    st.markdown("Cadastre manualmente um profissional. A senha padrão de primeiro acesso será **mudar@123**.")
+    st.markdown("Cadastre manualmente um profissional.")
 
     with st.form("form_cadastro_admin"):
         col1, col2 = st.columns(2)
