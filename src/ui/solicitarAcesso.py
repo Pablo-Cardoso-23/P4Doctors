@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+from src.database.crud import registrar_solicitacao_medico
 
 st.title("Solicitação de Acesso")
 st.markdown("""
@@ -11,7 +12,12 @@ st.markdown("---")
 
 st.subheader("Dados Pessoais e Profissionais")
 
-nome = st.text_input("Nome Completo", placeholder="Ex Dr. Pablo James")
+col_nome, col_cpf = st.columns(2)
+with col_nome:
+    nome = st.text_input("Nome Completo", placeholder="Ex Dr. Pablo James")
+with col_cpf:
+    cpf = st.text_input("CPF", placeholder="000.000.000-00")
+
 email = st.text_input("E-mail Profissional", placeholder="seuemail@email.com.br")
 
 col1, col2 = st.columns(2)
@@ -54,11 +60,17 @@ st.markdown("---")
 botao_enviar = st.button("Enviar Solicitação", type="primary", use_container_width=True)
 
 if botao_enviar:
-    if nome and email and crm and especialidade:
-        st.success("Solicitação enviada com sucesso! Fique de olho na sua caixa de entrada e na pasta de spam. Obrigado por se juntar a P4!")
-        time.sleep(3)
-        st.switch_page("src/ui/sobre.py")
+    if nome and cpf and email and crm and especialidade:
+        try:
+            registrar_solicitacao_medico(nome, cpf, email, crm, uf_crm, especialidade)
+            
+            st.success("Solicitação enviada com sucesso! Fique de olho na sua caixa de entrada e na pasta de spam. Obrigado por se juntar à P4!")
+            time.sleep(3)
+            st.switch_page("src/ui/sobre.py")
+        except Exception as e:
+            st.error(f"Erro ao processar solicitação. Verifique se o CPF ou E-mail já estão cadastrados no sistema. Detalhes: {e}")
     else:
         st.warning("Por favor, preencha todos os campos obrigatórios para prosseguir.")
+
 if st.button("Voltar para a página inicial"):
     st.switch_page("src/ui/sobre.py")

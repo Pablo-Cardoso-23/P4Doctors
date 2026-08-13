@@ -4,6 +4,7 @@ from supabase import create_client, Client
 import uuid
 from datetime import datetime, timedelta
 import bcrypt
+import secrets
 
 @st.cache_resource
 def obter_conexao_supabase() -> Client:
@@ -389,4 +390,59 @@ def atualizar_paciente_banco(pessoa_id: str, nome: str, cpf: str, telefone: str,
         'observacoes': observacoes.strip()
     }).eq('pessoa_id', str(pessoa_id)).execute()
     
+    return True
+
+def registrar_solicitacao_medico(nome: str, cpf: str, email: str, crm: str, uf_crm: str, especialidade: str):
+    """
+    Registra um novo pedido de acesso na plataforma. 
+    O status inicial é sempre 'Pendente' para passar pela triagem do admin.
+    """
+    res_pessoa = supabase.table('pessoas').insert({
+        'nome_completo': nome.strip(),
+        'cpf': cpf.strip(),
+        'status': 'Pendente'
+    }).execute()
+    
+    pessoa_id = res_pessoa.data[0]['id']
+    
+    supabase.table('medicos').insert({
+        'pessoa_id': pessoa_id,
+        'email': email.strip().lower(),
+        'crm': f"{crm.strip()}/{uf_crm}",
+        'especialidade': especialidade.strip()
+    }).execute()
+    
+    return True
+
+def registrar_solicitacao_medico(nome: str, cpf: str, email: str, crm: str, uf_crm: str, especialidade: str):
+    """
+    Registra um novo pedido de acesso na plataforma. 
+    Injeta uma senha fantasma criptografada para satisfazer o banco e manter a conta inacessível.
+    """
+    res_pessoa = supabase.table('pessoas').insert({
+        'nome_completo': nome.strip(),
+        'cpf': cpf.strip(),
+        'status': 'Pendente'
+    }).execute()
+    
+    pessoa_id = res_pessoa.data[0]['id']
+    senha_fantasma = secrets.token_urlsafe(32)
+    hash_fantasma = bcrypt.hashpw(senha_fantasma.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    supabase.table('medicos').insert({
+        'pessoa_id': pessoa_id,
+        'email': email.strip().lower(),
+        'crm': f"{crm.strip()}/{uf_crm}",
+        'especialidade': especialidade.strip(),
+        'senha_hash': hash_fantasma
+    }).execute()
+    
+    return True
+
+def aprovar_solicitacao_com_senha(pessoa_id: str, senha_hash: str):
+    """
+    Aprova o cadastro do médico e injeta a senha real e definitiva criptografada.
+    """
+    supabase.table('pessoas').update({'status': 'Ativo'}).eq('id', str(pessoa_id)).execute()
+    supabase.table('medicos').update({'senha_hash': senha_hash}).eq('pessoa_id', str(pessoa_id)).execute()
     return True

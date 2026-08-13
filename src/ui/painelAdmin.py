@@ -3,11 +3,13 @@ import pandas as pd
 import bcrypt
 import string
 import secrets
+import time
 
 from src.database.crud import (
     listar_todos_usuarios, 
     atualizar_status_usuario, 
-    criar_usuario_completo
+    criar_usuario_completo,
+    aprovar_solicitacao_com_senha
 )
 
 st.set_page_config(page_title="Painel Administrativo", layout="wide")
@@ -82,6 +84,17 @@ with aba_pendencias:
     st.subheader("Aguardando Aprovação")
     st.markdown("Revise as solicitações de acesso (cadastros realizados pela tela de login).")
 
+    if 'senha_recem_gerada' in st.session_state:
+        st.success(st.session_state['msg_sucesso'])
+        st.info(f"A senha de acesso provisória gerada é: **{st.session_state['senha_recem_gerada']}**")
+        st.warning("Copie a senha acima e envie ao profissional agora! Ela não será exibida novamente.")
+        
+        if st.button("OK, já copiei a senha", type="secondary", use_container_width=True):
+            del st.session_state['senha_recem_gerada']
+            del st.session_state['msg_sucesso']
+            st.rerun()
+        st.markdown("---")
+
     if not lista_pendentes:
         st.info("Não há nenhuma solicitação de acesso pendente no momento.")
     else:
@@ -94,12 +107,20 @@ with aba_pendencias:
 
             col4_a, col4_b = col4.columns(2)
             if col4_a.button("Aprovar", key=f"apr_{pendencia['ID']}", type="primary"):
-                atualizar_status_usuario(pendencia['ID'], 'Ativo')
-                st.success(f"Acesso liberado para {pendencia['Nome']}.")
+                caracteres = string.ascii_letters + string.digits + "!@#$%"
+                senha_aleatoria = ''.join(secrets.choice(caracteres) for _ in range(10))
+                senha_criptografada = bcrypt.hashpw(senha_aleatoria.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                
+                aprovar_solicitacao_com_senha(pendencia['ID'], senha_criptografada)
+                
+                st.session_state['senha_recem_gerada'] = senha_aleatoria
+                st.session_state['msg_sucesso'] = f"Acesso liberado para {pendencia['Nome']} com sucesso!"
                 st.rerun()
+                
             if col4_b.button("Recusar", key=f"rec_{pendencia['ID']}"):
                 atualizar_status_usuario(pendencia['ID'], 'Recusado')
                 st.warning(f"Solicitação de {pendencia['Nome']} recusada.")
+                time.sleep(1)
                 st.rerun()
 
 with aba_usuarios:
@@ -125,11 +146,13 @@ with aba_usuarios:
                     if st.button("Inativar", use_container_width=True):
                         atualizar_status_usuario(usuario_selecionado['ID'], 'Inativo')
                         st.success("Usuário inativado com sucesso!")
+                        time.sleep(1)
                         st.rerun()
                 else:
                     if st.button("Reativar Acesso", type="primary", use_container_width=True):
                         atualizar_status_usuario(usuario_selecionado['ID'], 'Ativo')
                         st.success("Usuário reativado com sucesso!")
+                        time.sleep(1)
                         st.rerun()
     else:
         st.info("Nenhum usuário ativo ou inativo encontrado.")
