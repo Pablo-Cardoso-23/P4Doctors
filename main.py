@@ -22,7 +22,8 @@ pagina_agendar_consulta = st.Page("src/ui/agendar_consulta.py", title="Agendar C
 pagina_inicial = st.Page("src/ui/menu.py", title="Menu")
 pagina_dashboard = st.Page("src/ui/dashboard.py", title="Dashboards")
 pagina_agendamentos = st.Page("src/ui/agenda.py", title="Agendamentos")
-pagina_criar_relatorio = st.Page("src/ui/criarRelatorio.py", title="Novo Relatorio")
+pagina_gestao_pacientes = st.Page("src/ui/gestao_pacientes.py", title="Gestão de Pacientes")
+pagina_criar_relatorio = st.Page("src/ui/criarRelatorio.py", title="Novo Relatório")
 pagina_meus_relatorios = st.Page("src/ui/meusRelatorios.py", title="Meus Relatórios")
 pagina_admin = st.Page("src/ui/painelAdmin.py", title="Painel Administrativo")
 
@@ -52,7 +53,7 @@ if st.session_state['usuario_autenticado']:
             {
                 "Página Inicial": [pagina_inicial],
                 "Dashboards": [pagina_dashboard],
-                "Agendamentos": [pagina_agendamentos],
+                "Consultas e Agenda": [pagina_agendamentos, pagina_gestao_pacientes],
                 "Registrar Relatório": [pagina_criar_relatorio],
                 "Meus Relatórios": [pagina_meus_relatorios],
             }

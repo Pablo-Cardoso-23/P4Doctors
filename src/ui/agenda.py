@@ -12,7 +12,8 @@ from src.database.crud import (
     buscar_agendamentos_pendentes, 
     aprovar_agendamento_web, 
     recusar_agendamento_web,
-    cadastrar_paciente_rapido
+    cadastrar_paciente_rapido,
+    atualizar_status_agendamento
 )
 
 st.set_page_config(page_title="Agenda Medica", layout="wide")
@@ -63,7 +64,7 @@ opcoes_calendario = {
     "slotMaxTime": "23:00:00",     
     "allDaySlot": False,
     "locale": "pt-br", 
-    
+    "height": 650,
     "slotDuration": "00:15:00", 
     "slotLabelFormat": {        
         "hour": "2-digit",
@@ -71,7 +72,7 @@ opcoes_calendario = {
         "omitZeroMinute": False,
     },
     "displayEventEnd": False,   
-    "timeZone": "local"         
+    "timeZone": "UTC" 
 }
 
 col_form, col_cal = st.columns([1, 3])
@@ -168,20 +169,54 @@ with col_cal:
         
         if len(eventos_bd) > 0:
             dados_tabela = []
+            opcoes_para_edicao = {}
+            
             for evento in eventos_bd:
                 inicio_dt = datetime.datetime.fromisoformat(evento["start"])
                 fim_dt = datetime.datetime.fromisoformat(evento["end"])
+                status_atual = evento.get("status", "-")
                 
                 dados_tabela.append({
                     "Paciente / Evento": evento["title"],
+                    "Contato": evento.get("contato", "-"),
                     "Data": inicio_dt.strftime("%d/%m/%Y"),
                     "Inicio": inicio_dt.strftime("%H:%M"),
                     "Fim": fim_dt.strftime("%H:%M"),
-                    "Status": evento.get("status", "-"),
+                    "Status": status_atual,
                     "Observacoes": evento.get("observacoes", "-")
                 })
+                
+                if status_atual not in ["Concluído", "Cancelado"]:
+                    rotulo = f"{inicio_dt.strftime('%d/%m')} às {inicio_dt.strftime('%H:%M')} - {evento['title']}"
+                    opcoes_para_edicao[rotulo] = evento["id"]
 
             st.dataframe(dados_tabela, use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+            st.subheader("Alterar Status")
+            st.caption("Atualize o status dos agendamentos pendentes apos o contato com o paciente ou fim da consulta.")
+            
+            if opcoes_para_edicao:
+                col_ed1, col_ed2, col_ed3 = st.columns([2, 1, 1])
+                
+                with col_ed1:
+                    agendamento_selecionado = st.selectbox("Selecione a Consulta", options=[""] + list(opcoes_para_edicao.keys()))
+                with col_ed2:
+                    novo_status_selecionado = st.selectbox("Novo Status", ["Agendado", "Confirmado", "Concluído", "Cancelado"])
+                with col_ed3:
+                    st.write("")
+                    if st.button("Salvar Status", type="primary", use_container_width=True):
+                        if agendamento_selecionado:
+                            id_do_agendamento = opcoes_para_edicao[agendamento_selecionado]
+                            atualizar_status_agendamento(id_do_agendamento, novo_status_selecionado)
+                            st.success("Status atualizado com sucesso!")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("Selecione uma consulta.")
+            else:
+                st.info("Nenhum agendamento pendente de atualizacao no momento.")
+                
         else:
             st.info("Nenhum agendamento encontrado para este medico.")
 
@@ -223,8 +258,8 @@ with col_cal:
                                 email_paciente=req.get('email_solicitante', ''), 
                                 telefone_paciente=req.get('telefone_solicitante', '')
                             )
-                            st.success("Aprovado! Paciente registrado e consulta marcada.")
-                            time.sleep(1)
+                            st.success("Aprovado! Registrado na agenda. Lembre-se de entrar em contato com o paciente.")
+                            time.sleep(2)
                             st.rerun()
                             
                         if col3_b.button("Recusar", key=f"rec_{req['id']}", use_container_width=True):

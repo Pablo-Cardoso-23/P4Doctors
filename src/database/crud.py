@@ -14,40 +14,36 @@ def obter_conexao_supabase() -> Client:
 supabase = obter_conexao_supabase()
 
 def buscar_agendamentos(medico_id: str) -> list:
-    resposta = supabase.table('agendamentos').select(
-        'id, tipo_evento, data_hora_inicio, data_hora_fim, status, observacoes, pacientes(pessoas(nome_completo))'
-    ).eq('medico_id', str(medico_id)).execute()
+    res = supabase.table('agendamentos').select(
+        'id, data_hora_inicio, data_hora_fim, tipo_evento, status, observacoes, pacientes(email, pessoas(nome_completo, telefone))'
+    ).eq('medico_id', medico_id).execute()
     
-    dados_banco = resposta.data 
-    
-    cores_por_tipo = {
-        "Primeira Consulta": "#1f77b4", 
-        "Retorno": "#2ca02c",           
-        "Cirurgia": "#9467bd",          
-        "Bloqueio Pessoal": "#d62728"   
-    }
-
-    eventos_calendario = []
-    
-    for linha in dados_banco:
-        dados_paciente = linha.get('pacientes') 
-        dados_pessoa = dados_paciente.get('pessoas') if dados_paciente else None
-        paciente_nome = dados_pessoa.get('nome_completo') if dados_pessoa else None
-        
-        tipo_evento = linha.get('tipo_evento')
-        titulo = f"{paciente_nome} ({tipo_evento})" if paciente_nome else tipo_evento
-        
-        eventos_calendario.append({
-            "id": linha.get('id'),
-            "title": titulo,
-            "start": linha.get('data_hora_inicio'), 
-            "end": linha.get('data_hora_fim'),
-            "color": cores_por_tipo.get(tipo_evento, "#333333"),
-            "status": linha.get('status'),
-            "observacoes": linha.get('observacoes')
-        })
-        
-    return eventos_calendario
+    eventos = []
+    if res.data:
+        for item in res.data:
+            nome = "Sem Nome"
+            telefone = "-"
+            email = "-"
+            
+            if item.get('pacientes'):
+                email = item['pacientes'].get('email', '-')
+                if item['pacientes'].get('pessoas'):
+                    nome = item['pacientes']['pessoas'].get('nome_completo', 'Sem Nome')
+                    telefone = item['pacientes']['pessoas'].get('telefone', '-')
+            
+            titulo = f"{nome} ({item['tipo_evento']})"
+            
+            eventos.append({
+                "id": item["id"],
+                "title": titulo,
+                "start": item["data_hora_inicio"],
+                "end": item["data_hora_fim"],
+                "status": item["status"],
+                "observacoes": item["observacoes"],
+                "contato": f"{telefone} | {email}"
+            })
+            
+    return eventos
 
 def buscar_pacientes_para_select() -> list:
     resposta = supabase.table('pacientes').select('pessoa_id, pessoas(nome_completo)').execute()
@@ -253,10 +249,6 @@ def criar_agendamento_publico(medico_id, data_hora_inicio, nome, email, telefone
     return resposta.data
 
 def aprovar_agendamento_web(agendamento_id: int, nome_paciente: str, email_paciente: str, telefone_paciente: str):
-    """
-    Verifica se o paciente já existe pelo e-mail. Se sim, apenas vincula. 
-    Se não, cadastra o novo paciente antes de aprovar o agendamento.
-    """
     busca_paciente = supabase.table('pacientes').select('pessoa_id').eq('email', email_paciente.strip().lower()).execute()
     
     if busca_paciente.data:
@@ -277,7 +269,7 @@ def aprovar_agendamento_web(agendamento_id: int, nome_paciente: str, email_pacie
 
     resposta_agendamento = supabase.table('agendamentos').update({
         'paciente_id': paciente_oficial_id,
-        'status': 'Confirmado'
+        'status': 'Agendado'
     }).eq('id', agendamento_id).execute()
     
     return resposta_agendamento.data
@@ -349,3 +341,52 @@ def cadastrar_paciente_rapido(nome: str, email: str, telefone: str) -> str:
     }).execute()
     
     return novo_id
+
+def atualizar_status_agendamento(agendamento_id: str, novo_status: str):
+    """
+    Permite alterar o status do agendamento (ex: de Agendado para Confirmado ou Concluido).
+    """
+    resposta = supabase.table('agendamentos').update({
+        'status': novo_status
+    }).eq('id', str(agendamento_id)).execute()
+    
+    return resposta.data
+
+def excluir_paciente_banco(pessoa_id: str):
+    """
+    Exclui um registro de paciente criado por engano.
+    Nota: Ira falhar por seguranca caso o paciente ja possua prontuarios ou atendimentos vinculados.
+    """
+    supabase.table('pacientes').delete().eq('pessoa_id', str(pessoa_id)).execute()
+    resposta = supabase.table('pessoas').delete().eq('id', str(pessoa_id)).execute()
+    
+    return resposta.data
+
+def buscar_todos_pacientes_completo() -> list:
+    """
+    Busca a lista de todos os pacientes unindo as tabelas 'pacientes' e 'pessoas'.
+    """
+    resposta = supabase.table('pacientes').select(
+        'pessoa_id, email, data_nascimento, tipo_sanguineo, observacoes, pessoas(nome_completo, cpf, telefone, status)'
+    ).execute()
+    
+    return resposta.data
+
+def atualizar_paciente_banco(pessoa_id: str, nome: str, cpf: str, telefone: str, email: str, data_nascimento: str, tipo_sanguineo: str, observacoes: str):
+    """
+    Atualiza os dados cadastrais do paciente em ambas as tabelas.
+    """
+    supabase.table('pessoas').update({
+        'nome_completo': nome.strip(),
+        'cpf': cpf.strip(),
+        'telefone': telefone.strip()
+    }).eq('id', str(pessoa_id)).execute()
+    
+    supabase.table('pacientes').update({
+        'email': email.strip().lower(),
+        'data_nascimento': data_nascimento,
+        'tipo_sanguineo': tipo_sanguineo,
+        'observacoes': observacoes.strip()
+    }).eq('pessoa_id', str(pessoa_id)).execute()
+    
+    return True

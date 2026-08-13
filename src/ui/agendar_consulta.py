@@ -4,7 +4,6 @@ from src.database.crud import buscar_medicos_publico, criar_agendamento_publico
 
 st.set_page_config(page_title="Agendar Consulta - P4 Health", layout="centered")
 
-st.image("https://cdn-icons-png.flaticon.com/512/2966/2966327.png", width=80) # Ícone genérico de saúde
 st.title("Agendar Consulta")
 st.markdown("Bem-vindo(a) à central de agendamentos da **P4 Health**.")
 st.markdown("Preencha o formulário abaixo para solicitar um horário. Nossa equipe avaliará a disponibilidade e confirmará sua consulta.")
@@ -69,4 +68,4 @@ with st.form("form_agendamento_publico"):
             except Exception as e:
                 st.error(f"Ocorreu um erro ao enviar sua solicitação. Tente novamente mais tarde. Erro: {e}")
 
-st.markdown("<br><br><center><small>Tecnologia P4 Health © 2026</small></center>", unsafe_allow_html=True)
+st.markdown("<br><br><center><small>P4 Health © 2026</small></center>", unsafe_allow_html=True)
