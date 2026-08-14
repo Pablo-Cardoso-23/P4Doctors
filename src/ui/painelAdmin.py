@@ -4,6 +4,7 @@ import bcrypt
 import string
 import secrets
 import time
+import requests
 
 from src.database.crud import (
     listar_todos_usuarios, 
@@ -87,9 +88,9 @@ with aba_pendencias:
     if 'senha_recem_gerada' in st.session_state:
         st.success(st.session_state['msg_sucesso'])
         st.info(f"A senha de acesso provisória gerada é: **{st.session_state['senha_recem_gerada']}**")
-        st.warning("Copie a senha acima e envie ao profissional agora! Ela não será exibida novamente.")
+        st.warning("Um e-mail foi disparado via automação. Caso ocorra alguma falha, copie a senha acima.")
         
-        if st.button("OK, já copiei a senha", type="secondary", use_container_width=True):
+        if st.button("OK, dispensar aviso", type="secondary", use_container_width=True):
             del st.session_state['senha_recem_gerada']
             del st.session_state['msg_sucesso']
             st.rerun()
@@ -113,12 +114,46 @@ with aba_pendencias:
                 
                 aprovar_solicitacao_com_senha(pendencia['ID'], senha_criptografada)
                 
+                url_n8n = st.secrets.get("N8N_WEBHOOK_URL", "")
+                falha_n8n = False
+                
+                if url_n8n:
+                    dados_email = {
+                        "nome_profissional": pendencia['Nome'],
+                        "email_destino": pendencia['Email'],
+                        "senha_provisoria": senha_aleatoria,
+                        "status": "aprovado" 
+                    }
+                    try:
+                        requests.post(url_n8n, json=dados_email, timeout=5)
+                    except Exception as e:
+                        falha_n8n = True
+                        st.error(f"Erro ao notificar automação de e-mail: {e}")
+                
                 st.session_state['senha_recem_gerada'] = senha_aleatoria
-                st.session_state['msg_sucesso'] = f"Acesso liberado para {pendencia['Nome']} com sucesso!"
+                if falha_n8n or not url_n8n:
+                    st.session_state['msg_sucesso'] = f"Acesso liberado para {pendencia['Nome']}, mas o e-mail automático falhou."
+                else:
+                    st.session_state['msg_sucesso'] = f"Acesso liberado para {pendencia['Nome']} e credenciais enviadas por e-mail (n8n)!"
+                
                 st.rerun()
                 
             if col4_b.button("Recusar", key=f"rec_{pendencia['ID']}"):
                 atualizar_status_usuario(pendencia['ID'], 'Recusado')
+                
+                url_n8n = st.secrets.get("N8N_WEBHOOK_URL", "")
+                if url_n8n:
+                    dados_email = {
+                        "nome_profissional": pendencia['Nome'],
+                        "email_destino": pendencia['Email'],
+                        "senha_provisoria": "",
+                        "status": "recusado"
+                    }
+                    try:
+                        requests.post(url_n8n, json=dados_email, timeout=5)
+                    except Exception:
+                        pass
+                
                 st.warning(f"Solicitação de {pendencia['Nome']} recusada.")
                 time.sleep(1)
                 st.rerun()
@@ -193,8 +228,25 @@ with aba_novo_usuario:
                     )
                     
                     st.success(f"Conta para {novo_nome} criada com sucesso no banco de dados!")
-                    st.info(f"A senha provisória gerada para este usuário é: **{senha_aleatoria}**")
-                    st.warning("Copie esta senha e envie ao profissional agora. Por motivos de segurança, ela não será exibida novamente e não temos como recuperá-la depois!")
+                    
+                    url_n8n = st.secrets.get("N8N_WEBHOOK_URL", "")
+                    
+                    if url_n8n:
+                        dados_email = {
+                            "nome_profissional": novo_nome,
+                            "email_destino": novo_email,
+                            "senha_provisoria": senha_aleatoria,
+                            "status": "aprovado"
+                        }
+                        try:
+                            requests.post(url_n8n, json=dados_email, timeout=5)
+                            st.info("Credenciais enviadas automaticamente para o e-mail do profissional via n8n.")
+                        except Exception as e:
+                            st.error(f"Cadastro concluído, mas falha ao notificar o n8n. Erro: {e}")
+                            st.warning(f"A senha gerada foi: **{senha_aleatoria}**. Envie manualmente.")
+                    else:
+                        st.info(f"A senha provisória gerada para este usuário é: **{senha_aleatoria}**")
+                        st.warning("Copie esta senha e envie ao profissional agora. Nenhuma URL n8n foi configurada.")
                     
                 except Exception as e:
                     st.error(f"Erro ao cadastrar usuário no banco de dados. Verifique se o CPF ou E-mail já existem. Detalhes: {e}")
