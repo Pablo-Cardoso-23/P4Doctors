@@ -1,0 +1,7 @@
+streamlit>=1.30.0
+pandas>=2.0.0
+bcrypt>=4.1.0
+requests>=2.31.0
+supabase>=2.3.0
+pytest>=8.0.0
+pytest-mock>=3.12.0
