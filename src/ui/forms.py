@@ -95,7 +95,6 @@ if st.session_state.get('forcing_password_change'):
                 except Exception as e:
                     st.error(f"Erro ao atualizar a senha: {e}")
                     
-    # O st.stop() trava a execução, impedindo que o formulário de login abaixo apareça
     st.stop()
 
 st.title("Acesso ao Sistema")
@@ -172,3 +171,5 @@ with st.form("form_login"):
                 st.error("Múltiplas tentativas falhas. Acesso bloqueado globalmente por 3 minutos.")
             else:
                 st.error("Credenciais inválidas. Verifique seu e-mail e senha.")
+
+st.markdown("<br><hr><p style='text-align: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem;'>&copy; 2026 P4 Health. Todos os direitos reservados.</p>", unsafe_allow_html=True)

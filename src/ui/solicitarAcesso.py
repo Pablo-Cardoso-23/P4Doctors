@@ -74,3 +74,5 @@ if botao_enviar:
 
 if st.button("Voltar para a página inicial"):
     st.switch_page("src/ui/sobre.py")
+
+st.markdown("<br><hr><p style='text-align: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem;'>&copy; 2026 P4 Health. Todos os direitos reservados.</p>", unsafe_allow_html=True)

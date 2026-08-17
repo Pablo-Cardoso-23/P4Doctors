@@ -68,4 +68,4 @@ with st.form("form_agendamento_publico"):
             except Exception as e:
                 st.error(f"Ocorreu um erro ao enviar sua solicitação. Tente novamente mais tarde. Erro: {e}")
 
-st.markdown("<br><br><center><small>P4 Health © 2026</small></center>", unsafe_allow_html=True)
+st.markdown("<br><hr><p style='text-align: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem;'>&copy; 2026 P4 Health. Todos os direitos reservados.</p>", unsafe_allow_html=True)
