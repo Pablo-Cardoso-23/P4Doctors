@@ -7,7 +7,7 @@ from src.database.crud import buscar_medicos_vinculados
 from src.utils.security import verificar_acesso
 from src.utils.pdf_generator import gerar_pdf_prontuario
 
-st.set_page_config(page_title="Historico de Atendimentos", layout="wide")
+st.set_page_config(page_title="Histórico de Atendimentos", layout="wide")
 
 if not st.session_state.get('usuario_autenticado') or not st.session_state.get('usuario_id'):
     st.warning("Acesso restrito. Por favor, realize o login para acessar esta pagina.")
@@ -35,7 +35,7 @@ if tipo_perfil in ['Secretária', 'Administrativo']:
     lista_medicos = buscar_medicos_vinculados(usuario_logado_id)
     
     if not lista_medicos:
-        st.error("Voce ainda nao possui vinculo com nenhum medico. Contate o administrador.")
+        st.error("Você ainda nao possui vinculo com nenhum medico. Contate o administrador.")
         st.stop()
 
     medico_selecionado = st.selectbox(
@@ -96,7 +96,7 @@ def carregar_historico_db(medico_id):
 
 df_historico = carregar_historico_db(medico_alvo_id)
 
-st.title("Historico de Atendimentos")
+st.title("Histórico de Atendimentos")
 st.markdown("Consulte, filtre e revise todos os relatorios, consultas e plantoes registrados no sistema.")
 st.markdown("---")
 

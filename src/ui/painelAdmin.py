@@ -5,12 +5,12 @@ import string
 import secrets
 import time
 import requests
-
 from src.database.crud import (
     listar_todos_usuarios, 
     atualizar_status_usuario, 
     criar_usuario_completo,
-    aprovar_solicitacao_com_senha
+    aprovar_solicitacao_com_senha,
+    criar_vinculo_equipe_medico
 )
 
 st.set_page_config(page_title="Painel Administrativo", layout="wide")
@@ -24,6 +24,11 @@ st.markdown("Gestão de acessos, aprovação de cadastros e controle de profissi
 st.markdown("---")
 
 with st.sidebar:
+    st.markdown("### Controles")
+    if st.button("Atualizar Dados", use_container_width=True, type="primary"):
+        st.rerun()
+        
+    st.markdown("---")
     if st.button("Sair da Conta", use_container_width=True):
         st.session_state.clear()
         st.rerun()
@@ -75,9 +80,10 @@ with col_kpi3:
 
 st.markdown("---")
 
-aba_pendencias, aba_usuarios, aba_novo_usuario = st.tabs([
+aba_pendencias, aba_usuarios, aba_vinculos, aba_novo_usuario = st.tabs([
     "Solicitações Pendentes",
-    "Gestão de Usuários (Ativos/Inativos)",
+    "Gestão de Usuários",
+    "Vincular Equipe",
     "Cadastrar Novo Usuário"
 ])
 
@@ -97,7 +103,7 @@ with aba_pendencias:
         st.markdown("---")
 
     if not lista_pendentes:
-        st.info("Não há nenhuma solicitação de acesso pendente no momento.")
+        st.info("Não há nenhuma solicitação de acesso pendente no momento. Utilize o botão 'Atualizar Dados' na barra lateral para checar novamente.")
     else:
         for pendencia in lista_pendentes:
             container = st.container(border=True)
@@ -192,6 +198,41 @@ with aba_usuarios:
     else:
         st.info("Nenhum usuário ativo ou inativo encontrado.")
 
+with aba_vinculos:
+    st.subheader("Delegação de Agendas")
+    st.markdown("Vincule uma secretária(o) à agenda de um médico específico para permitir que ela gerencie os pacientes e faturamentos dele.")
+    
+    medicos_ativos = [u for u in lista_ativos_inativos if u['Perfil'] == 'Médico' and u['Status'] == 'Ativo']
+    equipe_ativa = [u for u in lista_ativos_inativos if u['Perfil'] != 'Médico' and u['Status'] == 'Ativo']
+    
+    if not medicos_ativos or not equipe_ativa:
+        st.warning("Você precisa ter pelo menos um Médico Ativo e uma Secretária Ativa cadastrados para fazer o vínculo.")
+    else:
+        with st.form("form_vinculo"):
+            col_v1, col_v2 = st.columns(2)
+            with col_v1:
+                secretaria_selecionada = st.selectbox(
+                    "Selecione a Secretária(o)",
+                    options=equipe_ativa,
+                    format_func=lambda x: x['Nome']
+                )
+            with col_v2:
+                medico_selecionado = st.selectbox(
+                    "Selecione o Médico",
+                    options=medicos_ativos,
+                    format_func=lambda x: f"Dr(a). {x['Nome']}"
+                )
+            
+            if st.form_submit_button("Criar Vínculo de Agenda", type="primary"):
+                sucesso = criar_vinculo_equipe_medico(secretaria_selecionada['ID'], medico_selecionado['ID'])
+                
+                if sucesso:
+                    st.success(f"Vínculo criado! A partir de agora, {secretaria_selecionada['Nome']} tem permissão total para gerenciar a agenda do(a) Dr(a). {medico_selecionado['Nome']}.")
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.warning("Ação cancelada: Este vínculo já existe no banco de dados!")
+                    
 with aba_novo_usuario:
     st.subheader("Adicionar Usuário ao Sistema")
     st.markdown("Cadastre manualmente um profissional.")

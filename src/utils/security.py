@@ -10,15 +10,18 @@ def verificar_acesso(perfis_permitidos=None):
     agora = datetime.datetime.now()
 
     if not st.session_state.get("usuario_autenticado"):
-        st.switch_page("src/ui/forms.py")
+        st.rerun()
+        
     if "ultimo_acesso" in st.session_state:
         diferenca = (agora - st.session_state['ultimo_acesso']).total_seconds() / 60
         if diferenca > TIMEOUT_MINUTOS:
             for chave in list(st.session_state.keys()):
                 del st.session_state[chave]
-            st.error(f"Sessão expirada após {TIMEOUT_MINUTOS} minutos.")
-            time.sleep(3)
-            st.switch_page("src/ui/forms.py")
+            
+            st.warning(f"Sessão expirada por inatividade após {TIMEOUT_MINUTOS} minutos.")
+            st.info("Redirecionando para a tela de login...")
+            time.sleep(2.5)
+            st.rerun()
     
     st.session_state['ultimo_acesso'] = agora
 
@@ -26,6 +29,7 @@ def verificar_acesso(perfis_permitidos=None):
         perfil_atual = st.session_state.get("tipo_perfil")
         if perfil_atual not in perfis_permitidos:
             st.error(f"Acesso negado para o perfil: {perfil_atual}.")
+            
             if perfil_atual == "Administrativo":
                 if st.button("Ir para o Painel Administrativo"):
                     st.switch_page("src/ui/painelAdmin.py")

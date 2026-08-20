@@ -8,14 +8,14 @@ from src.database.crud import (
     excluir_paciente_banco
 )
 
-st.set_page_config(page_title="Gestao de Pacientes", layout="wide")
+st.set_page_config(page_title="Gestão de Pacientes", layout="wide")
 
 if not st.session_state.get('usuario_autenticado') or not st.session_state.get('usuario_id'):
     st.switch_page("src/ui/forms.py")
 
 verificar_acesso(perfis_permitidos=["Médico", "Secretária", "Administrativo"])
 
-st.title("Gestao de Pacientes")
+st.title("Gestão de Pacientes")
 st.markdown("Visualize, atualize os dados cadastrais ou remova registros inseridos incorretamente.")
 st.markdown("---")
 

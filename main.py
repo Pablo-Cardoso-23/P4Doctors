@@ -61,8 +61,8 @@ if st.session_state['usuario_autenticado']:
 else:
     pg = st.navigation(
         {
-            "Portal do Paciente": [pagina_agendar_consulta],
-            "Institucional": [pagina_sobre, pagina_login, pagina_solicitar_acesso]
+            "Institucional": [pagina_sobre, pagina_login, pagina_solicitar_acesso],
+            "Portal do Paciente": [pagina_agendar_consulta]
         }
     )
 

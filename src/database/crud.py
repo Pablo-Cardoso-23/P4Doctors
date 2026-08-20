@@ -446,3 +446,19 @@ def aprovar_solicitacao_com_senha(pessoa_id: str, senha_hash: str):
     supabase.table('pessoas').update({'status': 'Ativo'}).eq('id', str(pessoa_id)).execute()
     supabase.table('medicos').update({'senha_hash': senha_hash}).eq('pessoa_id', str(pessoa_id)).execute()
     return True
+
+def criar_vinculo_equipe_medico(equipe_id: str, medico_id: str):
+    """
+    Cria o vínculo de delegação de agenda entre uma secretária(o) e um médico (Atende a HU03).
+    """
+    busca = supabase.table('vinculo_equipe_medico').select('*').eq('equipe_id', str(equipe_id)).eq('medico_id', str(medico_id)).execute()
+    
+    if busca.data:
+        return False
+        
+    supabase.table('vinculo_equipe_medico').insert({
+        'equipe_id': str(equipe_id),
+        'medico_id': str(medico_id)
+    }).execute()
+    
+    return True

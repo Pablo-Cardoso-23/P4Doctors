@@ -15,36 +15,79 @@ tag_imagem = f'<img src="data:image/png;base64,{img_hero_b64}" alt="P4 Doctors P
 
 st.markdown(f"""
 <style>
+/* Importando uma tipografia premium do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;800&display=swap');
+
 .block-container {{
-    padding-top: 2rem;
+    padding-top: 1rem;
     padding-bottom: 4rem;
     max-width: 1200px;
 }}
 
 .hero-wrapper {{
+    position: relative;
+    overflow: hidden; 
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #0a0a0a 0%, #4a0000 100%);
+    background: #0a0a0a; /* Fundo base escuro */
     border-radius: 24px;
     padding: 60px 50px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    margin-top: 80px; 
     margin-bottom: 70px;
     gap: 50px;
 }}
+
+.hero-wrapper::before, .hero-wrapper::after {{
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    /* Utilizando estritamente o RGB (211, 47, 47) que corresponde à cor dos títulos */
+    background: radial-gradient(circle at 50% 50%, rgba(211, 47, 47, 0.25), transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(211, 47, 47, 0.20), transparent 50%);
+    animation: cosmicFlow 25s infinite linear;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.5s ease, animation-duration 0.5s ease;
+}}
+.hero-wrapper::after {{
+    background: radial-gradient(circle at 20% 80%, rgba(211, 47, 47, 0.20), transparent 50%);
+    animation: cosmicFlow 20s infinite linear reverse;
+}}
+
+.hero-wrapper:hover::before, .hero-wrapper:hover::after {{
+    opacity: 0.9;
+    animation-duration: 8s;
+}}
+
+@keyframes cosmicFlow {{
+    0% {{ transform: rotate(0deg) scale(1); }}
+    50% {{ transform: rotate(180deg) scale(1.2); }}
+    100% {{ transform: rotate(360deg) scale(1); }}
+}}
+
 .hero-text {{
     flex: 1.2;
-    color: #ffffff;
     text-align: left;
+    z-index: 1; /* Fica acima da animação */
+    position: relative;
 }}
 .hero-text h1 {{
+    font-family: 'Montserrat', sans-serif;
     font-size: 3.5rem;
     font-weight: 800;
     margin-bottom: 20px;
     color: #ffffff;
     line-height: 1.1;
+    letter-spacing: -1px;
 }}
 .hero-text p {{
+    font-family: 'Montserrat', sans-serif;
     font-size: 1.15rem;
     font-weight: 300;
     color: #e0e0e0;
@@ -54,6 +97,8 @@ st.markdown(f"""
     flex: 1;
     display: flex;
     justify-content: flex-end;
+    z-index: 1;
+    position: relative;
 }}
 .hero-image img {{
     max-width: 100%;
@@ -63,12 +108,12 @@ st.markdown(f"""
     object-fit: cover;
 }}
 
-/* Ajuste de responsividade para telas menores */
 @media (max-width: 900px) {{
     .hero-wrapper {{
         flex-direction: column;
         text-align: center;
         padding: 40px 30px;
+        margin-top: 40px;
     }}
     .hero-text {{
         text-align: center;
@@ -82,6 +127,7 @@ st.markdown(f"""
 .section-title {{
     text-align: center;
     color: var(--text-color);
+    font-family: 'Montserrat', sans-serif;
     font-size: 2rem;
     font-weight: 700;
     margin-top: 20px;
@@ -90,6 +136,7 @@ st.markdown(f"""
 .section-subtitle {{
     text-align: center;
     color: var(--text-color);
+    font-family: 'Montserrat', sans-serif;
     opacity: 0.8;
     font-size: 1.1rem;
     margin-bottom: 60px;
@@ -114,7 +161,8 @@ st.markdown(f"""
     border-color: #D32F2F;
 }}
 .card-header {{
-    color: #D32F2F;
+    color: #D32F2F; /* O vermelho base da marca (rgb 211, 47, 47) */
+    font-family: 'Montserrat', sans-serif;
     font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 15px;
@@ -139,6 +187,7 @@ st.markdown(f"""
 }}
 .cta-title {{
     color: var(--text-color);
+    font-family: 'Montserrat', sans-serif;
     font-size: 1.8rem;
     font-weight: 700;
     margin-bottom: 15px;
@@ -221,4 +270,4 @@ with col_btn2:
     if st.button("Solicitar Acesso à Plataforma", type="primary", use_container_width=True):
         st.switch_page("src/ui/solicitarAcesso.py")
 
-st.markdown("<br><hr><p style='text-align: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem;'>&copy; 2026 P4 Health. Todos os direitos reservados.</p>", unsafe_allow_html=True)
+st.markdown("<br><hr><p style='text-align: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem; font-family: Montserrat, sans-serif;'>&copy; 2026 P4 Health Solutions. Todos os direitos reservados.</p>", unsafe_allow_html=True)
